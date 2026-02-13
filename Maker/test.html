@@ -23,6 +23,7 @@ input,select,button{
   border:2px solid #ccc;
   display:inline-block;
   max-width:100%;
+  margin-top:10px;
 }
 
 #mainImage{
@@ -71,7 +72,7 @@ textarea{
 
 <body>
 
-<h2>Chart Maker (Prefix Per Item)</h2>
+<h2>Chart Maker</h2>
 
 Chart Name:
 <input id="chartName" value="Sample Chart">
@@ -90,14 +91,13 @@ Step:
 Page:
 <select id="pageSelect"></select>
 
-Image Path (JSON):
+Image Path (for JSON only):
 <input id="pageImagePath" placeholder="images/page1.png">
-<button onclick="addPage()">Add Page</button>
-
-<br><br>
 
 Upload Image (Preview Only):
 <input type="file" id="imgUpload">
+
+<button onclick="addPage()">Add Page</button>
 
 <hr>
 
@@ -117,6 +117,8 @@ Upload Image (Preview Only):
 
 <script>
 
+/* ---------------- DATA ---------------- */
+
 let chart={
   name:"Sample Chart",
   pages:[],
@@ -124,23 +126,35 @@ let chart={
 };
 
 let currentPage=null;
+let currentPreviewImage=null;
 let drawData=null;
 
 const img=document.getElementById("mainImage");
 const boxLayer=document.getElementById("boxLayer");
 
-/* ---------------- PAGE ---------------- */
+/* ---------------- ADD PAGE ---------------- */
 
 function addPage(){
-  const id=chart.pages.length+1;
-  const image=document.getElementById("pageImagePath").value;
-  if(!image) return alert("Enter image path");
 
-  chart.pages.push({id,image});
+  const imagePath=document.getElementById("pageImagePath").value;
+  if(!imagePath) return alert("Enter image path for JSON");
+
+  if(!currentPreviewImage)
+    return alert("Upload image for preview first");
+
+  const id=chart.pages.length+1;
+
+  chart.pages.push({
+    id:id,
+    image:imagePath
+  });
+
   updatePageSelect();
   selectPage(id);
   updateJSON();
 }
+
+/* ---------------- PAGE SELECT ---------------- */
 
 function updatePageSelect(){
   const sel=document.getElementById("pageSelect");
@@ -159,16 +173,18 @@ document.getElementById("pageSelect").onchange=function(){
 
 function selectPage(id){
   currentPage=id;
-  const page=chart.pages.find(p=>p.id==id);
-  img.src=page.image;
+  img.src=currentPreviewImage;
   renderBoxes();
 }
 
+/* ---------------- IMAGE UPLOAD ---------------- */
+
 document.getElementById("imgUpload").onchange=function(e){
   const file=e.target.files[0];
-  if(file){
-    img.src=URL.createObjectURL(file); // preview only
-  }
+  if(!file) return;
+
+  currentPreviewImage=URL.createObjectURL(file);
+  img.src=currentPreviewImage;
 };
 
 img.onload=function(){
@@ -183,7 +199,7 @@ let startX,startY,drawing=false;
 
 boxLayer.addEventListener("mousedown",function(e){
 
-  if(!img.src) return;
+  if(!currentPage) return alert("Add page first");
 
   const rect=boxLayer.getBoundingClientRect();
   startX=e.clientX-rect.left;
@@ -235,7 +251,7 @@ boxLayer.addEventListener("mousedown",function(e){
 
     temp.remove();
 
-    openAddItem();
+    addItem();
   }
 
   document.addEventListener("mousemove",move);
@@ -244,14 +260,14 @@ boxLayer.addEventListener("mousedown",function(e){
 
 /* ---------------- ADD ITEM ---------------- */
 
-function openAddItem(){
+function addItem(){
 
-  let prefix=prompt("Enter Prefix:");
+  const prefix=prompt("Enter Prefix:");
   if(prefix===null) return;
 
   let number;
 
-  if(autoNumber.checked){
+  if(document.getElementById("autoNumber").checked){
     number=getNextAutoNumber(prefix);
   }else{
     number=prompt("Enter Number:");
@@ -280,7 +296,6 @@ function getNextAutoNumber(prefix){
   while(isDuplicate(prefix,num)){
     num+=step;
   }
-
   return num;
 }
 
@@ -335,8 +350,7 @@ function renderList(){
     card.className="card";
 
     card.innerHTML=`
-    Prefix:<input value="${item.prefix}"><br>
-    Number:<input value="${num}"><br>
+    <b>${item.prefix+num}</b><br>
     Page:<input value="${item.page}"><br>
     X:<input value="${item.x}"><br>
     Y:<input value="${item.y}"><br>
@@ -348,23 +362,12 @@ function renderList(){
 
     const inputs=card.querySelectorAll("input");
 
-    inputs[0].oninput=function(){ item.prefix=this.value; renderBoxes(); updateJSON(); };
-
-    inputs[1].onchange=function(){
-      const newNum=this.value;
-      if(isDuplicate(item.prefix,newNum)){ alert("Duplicate"); return;}
-      chart.items[newNum]=item;
-      delete chart.items[num];
-      renderBoxes();
-      updateJSON();
-    };
-
-    inputs[2].oninput=function(){ item.page=parseInt(this.value); renderBoxes(); updateJSON(); };
-    inputs[3].oninput=function(){ item.x=parseFloat(this.value); renderBoxes(); updateJSON(); };
-    inputs[4].oninput=function(){ item.y=parseFloat(this.value); renderBoxes(); updateJSON(); };
-    inputs[5].oninput=function(){ item.w=parseFloat(this.value); renderBoxes(); updateJSON(); };
-    inputs[6].oninput=function(){ item.h=parseFloat(this.value); renderBoxes(); updateJSON(); };
-    inputs[7].oninput=function(){ item.color=this.value; updateJSON(); };
+    inputs[0].oninput=function(){ item.page=parseInt(this.value); renderBoxes(); updateJSON(); };
+    inputs[1].oninput=function(){ item.x=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[2].oninput=function(){ item.y=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[3].oninput=function(){ item.w=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[4].oninput=function(){ item.h=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[5].oninput=function(){ item.color=this.value; updateJSON(); };
 
     card.querySelector("button").onclick=function(){
       delete chart.items[num];
