@@ -1,3 +1,5 @@
+
+const app = {};
 let chart = {
   name:"",
   prefix:"",
