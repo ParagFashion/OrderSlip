@@ -1,0 +1,36 @@
+body{
+  font-family:Arial;
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+  background:#fffdf7;
+}
+
+.canvas-wrap{
+  position:relative;
+  border:2px solid #ccc;
+  display:inline-block;
+  max-width:100%;
+}
+
+#mainImage{
+  display:block;
+  max-width:100%;
+}
+
+#boxLayer{
+  position:absolute;
+  top:0;
+  left:0;
+}
+
+.box{
+  position:absolute;
+  border:2px solid red;
+  background:rgba(255,0,0,0.15);
+  cursor:pointer;
+}
+
+textarea{
+  width:100%;
+}
