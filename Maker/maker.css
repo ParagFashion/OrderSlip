@@ -1,6 +1,6 @@
 body{
   font-family:Arial;
-  max-width:1000px;
+  max-width:1100px;
   margin:auto;
   padding:20px;
   background:#fffdf7;
@@ -31,6 +31,32 @@ body{
   cursor:pointer;
 }
 
+#boxList{
+  margin-top:20px;
+}
+
+.box-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+  margin-bottom:8px;
+  padding:6px;
+  background:#fff7ed;
+  border-radius:8px;
+}
+
+.box-row input{
+  width:70px;
+  padding:4px;
+}
+
+.box-row button{
+  padding:4px 8px;
+  cursor:pointer;
+}
+
 textarea{
   width:100%;
+  margin-top:10px;
 }
