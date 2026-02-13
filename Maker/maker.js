@@ -103,13 +103,32 @@ function startDraw(e){
   drawing=true;
 
   function move(ev){
-    if(!drawing)return;
-    const cx=ev.touches?ev.touches[0].clientX:ev.clientX;
-    const cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-    temp.style.width=(cx-rect.left-startX)+"px";
-    temp.style.height=(cy-rect.top-startY)+"px";
-  }
+  if(!drawing) return;
 
+  const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+  const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+
+  let newW = cx - rect.left - startX;
+  let newH = cy - rect.top - startY;
+
+  // Prevent going outside right side
+  if(startX + newW > boxLayer.clientWidth)
+    newW = boxLayer.clientWidth - startX;
+
+  // Prevent going outside bottom
+  if(startY + newH > boxLayer.clientHeight)
+    newH = boxLayer.clientHeight - startY;
+
+  // Prevent negative overflow left/top
+  if(startX + newW < 0)
+    newW = -startX;
+
+  if(startY + newH < 0)
+    newH = -startY;
+
+  temp.style.width = newW + "px";
+  temp.style.height = newH + "px";
+}
   function stop(){
     drawing=false;
     document.removeEventListener("mousemove",move);
