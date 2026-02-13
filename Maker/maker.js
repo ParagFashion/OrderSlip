@@ -1,281 +1,220 @@
-const app = {};
+let chart = {
+  name:"",
+  prefix:"",
+  items:[]
+};
 
-let chart={name:"",pages:[]};
-let currentPageIndex=-1;
-let nextNumber=401;
+let nextNumber = 401;
+let currentBoxData = null;
 
-const img=document.getElementById("mainImage");
-const boxLayer=document.getElementById("boxLayer");
+const img = mainImage;
+const boxLayer = boxLayer;
 
-let startX,startY,drawing=false;
-let tempItemData=null;
+/* -------------------- IMAGE LOAD -------------------- */
 
-/* AUTO JSON UPDATE */
-function updateJSON(){
-  chart.name=document.getElementById("chartName").value;
-  document.getElementById("jsonOutput").value=
-    JSON.stringify(chart,null,2);
+function loadImage(){
+  img.src = imgUrl.value;
 }
 
-/* IMAGE LOAD */
-app.loadImageUrl=function(){
-  const url=document.getElementById("imgUrl").value;
-  if(!url)return;
-  img.src=url;
+imgFile.onchange = function(e){
+  const file = e.target.files[0];
+  if(file) img.src = URL.createObjectURL(file);
 };
 
-document.getElementById("imgFile").onchange=function(e){
-  const file=e.target.files[0];
-  if(!file)return;
-  img.src=URL.createObjectURL(file);
-};
-
-img.onload=function(){
-  boxLayer.style.width=img.clientWidth+"px";
-  boxLayer.style.height=img.clientHeight+"px";
-};
-
-/* PAGE */
-app.addPage=function(){
-  if(!img.src)return alert("Load image first");
-
-  nextNumber=parseInt(document.getElementById("startNumber").value)||1;
-
-  chart.pages.push({
-    id:Date.now(),
-    image:img.src,
-    items:[]
-  });
-
-  currentPageIndex=chart.pages.length-1;
-  refreshSelect();
-  renderBoxes();
-  updateJSON();
-};
-
-app.changePage=function(){
-  currentPageIndex=pageSelect.selectedIndex;
-  img.src=chart.pages[currentPageIndex].image;
+img.onload = function(){
+  boxLayer.style.width = img.clientWidth + "px";
+  boxLayer.style.height = img.clientHeight + "px";
   renderBoxes();
 };
 
-app.deletePage=function(){
-  if(currentPageIndex<0)return;
-  chart.pages.splice(currentPageIndex,1);
-  currentPageIndex=-1;
-  refreshSelect();
-  boxLayer.innerHTML="";
-  document.getElementById("boxList").innerHTML="";
+/* -------------------- PREFIX LIVE -------------------- */
+
+globalPrefix.addEventListener("input", function(){
+  chart.prefix = this.value.trim();
+  renderBoxes();
   updateJSON();
-};
+});
 
-function refreshSelect(){
-  const sel=document.getElementById("pageSelect");
-  sel.innerHTML="";
-  chart.pages.forEach((p,i)=>{
-    const o=document.createElement("option");
-    o.text="Page "+(i+1);
-    sel.add(o);
-  });
-  sel.selectedIndex=currentPageIndex;
-}
+/* -------------------- DRAW SYSTEM -------------------- */
 
-/* DRAW */
-boxLayer.addEventListener("mousedown",startDraw);
-boxLayer.addEventListener("touchstart",startDraw);
+let startX, startY, drawing=false;
+
+boxLayer.addEventListener("mousedown", startDraw);
 
 function startDraw(e){
-  if(currentPageIndex<0)return;
 
-  const rect=boxLayer.getBoundingClientRect();
-  const clientX=e.touches?e.touches[0].clientX:e.clientX;
-  const clientY=e.touches?e.touches[0].clientY:e.clientY;
+  const rect = boxLayer.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
 
-  startX=clientX-rect.left;
-  startY=clientY-rect.top;
-
-  let temp=document.createElement("div");
-  temp.className="box";
-  temp.style.left=startX+"px";
-  temp.style.top=startY+"px";
+  const temp = document.createElement("div");
+  temp.className = "box";
+  temp.style.left = startX + "px";
+  temp.style.top = startY + "px";
   boxLayer.appendChild(temp);
 
-  drawing=true;
+  drawing = true;
 
   function move(ev){
-  if(!drawing) return;
+    if(!drawing) return;
 
-  const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
-  const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    let w = ev.clientX - rect.left - startX;
+    let h = ev.clientY - rect.top - startY;
 
-  let newW = cx - rect.left - startX;
-  let newH = cy - rect.top - startY;
+    if(startX + w > boxLayer.clientWidth)
+      w = boxLayer.clientWidth - startX;
 
-  // Prevent going outside right side
-  if(startX + newW > boxLayer.clientWidth)
-    newW = boxLayer.clientWidth - startX;
+    if(startY + h > boxLayer.clientHeight)
+      h = boxLayer.clientHeight - startY;
 
-  // Prevent going outside bottom
-  if(startY + newH > boxLayer.clientHeight)
-    newH = boxLayer.clientHeight - startY;
+    temp.style.width = w + "px";
+    temp.style.height = h + "px";
+  }
 
-  // Prevent negative overflow left/top
-  if(startX + newW < 0)
-    newW = -startX;
-
-  if(startY + newH < 0)
-    newH = -startY;
-
-  temp.style.width = newW + "px";
-  temp.style.height = newH + "px";
-}
   function stop(){
-    drawing=false;
-    document.removeEventListener("mousemove",move);
-    document.removeEventListener("mouseup",stop);
-    document.removeEventListener("touchmove",move);
-    document.removeEventListener("touchend",stop);
+    drawing = false;
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", stop);
 
-    const w=parseFloat(temp.style.width);
-    const h=parseFloat(temp.style.height);
+    const w = parseFloat(temp.style.width);
+    const h = parseFloat(temp.style.height);
 
-    if(Math.abs(w)<5||Math.abs(h)<5){
+    if(w < 5 || h < 5){
       temp.remove();
       return;
     }
 
-    const scale=img.naturalWidth/img.clientWidth;
+    const scale = img.naturalWidth / img.clientWidth;
 
-    const realX=parseFloat(temp.style.left)*scale;
-    const realY=parseFloat(temp.style.top)*scale;
-    const realW=w*scale;
-    const realH=h*scale;
+    currentBoxData = {
+      x: parseFloat(temp.style.left) * scale,
+      y: parseFloat(temp.style.top) * scale,
+      w: w * scale,
+      h: h * scale
+    };
 
     temp.remove();
-    openPopup(realX,realY,realW,realH);
+
+    if(autoNumber.checked){
+      popupNumber.value = nextNumber;
+    }
+
+    popup.style.display = "flex";
   }
 
-  document.addEventListener("mousemove",move);
-  document.addEventListener("mouseup",stop);
-  document.addEventListener("touchmove",move);
-  document.addEventListener("touchend",stop);
+  document.addEventListener("mousemove", move);
+  document.addEventListener("mouseup", stop);
 }
 
-/* POPUP */
-function openPopup(x,y,w,h){
-  let auto=document.getElementById("autoNumber").checked;
-  let numberValue="";
+/* -------------------- DUPLICATE CHECK -------------------- */
 
-  if(auto)numberValue=nextNumber;
-
-  tempItemData={x,y,w,h};
-
-  popupNumber.value=numberValue;
-  popupColor.value="";
-  popupX.value=Math.round(x);
-  popupY.value=Math.round(y);
-  popupW.value=Math.round(w);
-  popupH.value=Math.round(h);
-
-  itemPopup.style.display="flex";
+function isDuplicate(num, ignoreIndex=null){
+  return chart.items.some((item,i)=>{
+    if(ignoreIndex!==null && i===ignoreIndex) return false;
+    return item.number == num;
+  });
 }
 
-function savePopup(){
-  if(!tempItemData)return;
+/* -------------------- SAVE ITEM -------------------- */
 
-  chart.pages[currentPageIndex].items.push({
-    number:popupNumber.value,
-    x:tempItemData.x,
-    y:tempItemData.y,
-    w:tempItemData.w,
-    h:tempItemData.h,
-    color:popupColor.value
+function saveItem(){
+
+  const num = popupNumber.value.trim();
+
+  if(isDuplicate(num)){
+    alert("Duplicate number not allowed");
+    return;
+  }
+
+  chart.items.push({
+    number:num,
+    color:popupColor.value,
+    ...currentBoxData
   });
 
-  if(document.getElementById("autoNumber").checked){
-    const step=parseInt(numberStep.value)||1;
-    nextNumber+=step;
+  if(autoNumber.checked){
+    nextNumber += parseInt(numberStep.value)||1;
   }
 
-  tempItemData=null;
-  itemPopup.style.display="none";
-
+  popup.style.display = "none";
   renderBoxes();
   updateJSON();
 }
 
-function cancelPopup(){
-  tempItemData=null;
-  itemPopup.style.display="none";
+function closePopup(){
+  popup.style.display = "none";
 }
 
-/* RENDER */
+/* -------------------- RENDER -------------------- */
+
 function renderBoxes(){
-  boxLayer.innerHTML="";
-  if(currentPageIndex<0)return;
 
-  const page=chart.pages[currentPageIndex];
-  const scale=img.clientWidth/img.naturalWidth;
+  boxLayer.innerHTML = "";
 
-  page.items.forEach(item=>{
+  const scale = img.clientWidth / img.naturalWidth;
 
-    const div=document.createElement("div");
-    div.className="box";
+  chart.items.forEach(item=>{
 
-    div.style.left=(item.x*scale)+"px";
-    div.style.top=(item.y*scale)+"px";
-    div.style.width=(item.w*scale)+"px";
-    div.style.height=(item.h*scale)+"px";
+    const div = document.createElement("div");
+    div.className = "box";
 
-    // Overlay number inside box
-    div.textContent = item.number || "";
+    div.style.left = item.x * scale + "px";
+    div.style.top = item.y * scale + "px";
+    div.style.width = item.w * scale + "px";
+    div.style.height = item.h * scale + "px";
+
+    div.textContent = (chart.prefix || "") + item.number;
+    div.style.fontSize = Math.max(12, (item.w * scale)/4) + "px";
 
     boxLayer.appendChild(div);
   });
 
   renderList();
 }
-/* LIST */
+
+/* -------------------- LIST -------------------- */
+
 function renderList(){
-  const list=document.getElementById("boxList");
-  list.innerHTML="";
-  if(currentPageIndex<0)return;
 
-  const page=chart.pages[currentPageIndex];
+  boxList.innerHTML = "";
 
-  page.items.forEach((item,index)=>{
-    const card=document.createElement("div");
-    card.className="box-card";
+  chart.items.forEach((item,index)=>{
 
-    card.innerHTML=`
-      <div><b>${item.number}</b></div>
-      X:<input value="${Math.round(item.x)}">
-      Y:<input value="${Math.round(item.y)}">
-      W:<input value="${Math.round(item.w)}">
-      H:<input value="${Math.round(item.h)}">
-      Color:<input value="${item.color||""}">
-      <button>Apply</button>
+    const card = document.createElement("div");
+    card.className = "box-card";
+
+    card.innerHTML = `
+      ${chart.prefix || ""}<input value="${item.number}">
       <button>Delete</button>
     `;
 
-    const inputs=card.querySelectorAll("input");
+    const input = card.querySelector("input");
 
-    card.querySelectorAll("button")[0].onclick=function(){
-      item.x=parseFloat(inputs[0].value)||0;
-      item.y=parseFloat(inputs[1].value)||0;
-      item.w=parseFloat(inputs[2].value)||0;
-      item.h=parseFloat(inputs[3].value)||0;
-      item.color=inputs[4].value;
+    input.addEventListener("input",function(){
+      if(isDuplicate(this.value,index)){
+        this.style.border="2px solid red";
+        return;
+      }
+      this.style.border="";
+      item.number = this.value;
+      renderBoxes();
+      updateJSON();
+    });
+
+    card.querySelector("button").onclick=function(){
+      chart.items.splice(index,1);
       renderBoxes();
       updateJSON();
     };
 
-    card.querySelectorAll("button")[1].onclick=function(){
-      page.items.splice(index,1);
-      renderBoxes();
-      updateJSON();
-    };
-
-    list.appendChild(card);
+    boxList.appendChild(card);
   });
+}
+
+/* -------------------- JSON -------------------- */
+
+function updateJSON(){
+  chart.name = chartName.value;
+  chart.prefix = globalPrefix.value.trim();
+  jsonOutput.value = JSON.stringify(chart,null,2);
 }
