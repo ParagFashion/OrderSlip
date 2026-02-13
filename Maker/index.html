@@ -15,8 +15,8 @@ Chart Name:
 
 Auto Numbering:
 <input type="checkbox" id="autoNumber" checked>
-Start From:
-<input type="number" id="startNumber" value="401" style="width:90px">
+Start:
+<input type="number" id="startNumber" value="401" style="width:80px">
 Step:
 <input type="number" id="numberStep" value="1" style="width:60px">
 <hr>
@@ -26,9 +26,7 @@ Image URL:
 <button onclick="app.loadImageUrl()">Load</button>
 
 OR Upload:
-<input type="file" id="imgFile" accept="image/*">
-
-<br><br>
+<input type="file" id="imgFile" accept="image/*"><br><br>
 
 <button onclick="app.addPage()">Add Page</button>
 <select id="pageSelect" onchange="app.changePage()"></select>
@@ -42,14 +40,32 @@ OR Upload:
 </div>
 
 <hr>
-<h3>Box List</h3>
+<h3>Items (5 per row)</h3>
 <div id="boxList"></div>
 
 <hr>
-<button onclick="app.exportJSON()">Export JSON</button>
-<input type="file" id="importJson" accept=".json">
-
 <textarea id="jsonOutput" rows="12"></textarea>
+
+<!-- Popup -->
+<div id="itemPopup" class="popup">
+  <div class="popup-box">
+    <h3>Add Item</h3>
+    Number:<br>
+    <input id="popupNumber"><br>
+    Color:<br>
+    <input id="popupColor" placeholder="Red"><br>
+    X:<br>
+    <input id="popupX" readonly><br>
+    Y:<br>
+    <input id="popupY" readonly><br>
+    Width:<br>
+    <input id="popupW" readonly><br>
+    Height:<br>
+    <input id="popupH" readonly><br><br>
+    <button onclick="savePopup()">Save</button>
+    <button onclick="cancelPopup()">Cancel</button>
+  </div>
+</div>
 
 <script src="maker.js"></script>
 </body>
