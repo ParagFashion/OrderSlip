@@ -1,17 +1,13 @@
 const app = {};
 
-let chart = {
-  name: "",
-  pages: []
-};
-
+let chart = { name:"", pages:[] };
 let currentPageIndex = -1;
-let currentItemIndex = -1;
+let nextNumber = 401;
 
-let img = document.getElementById("mainImage");
-let boxLayer = document.getElementById("boxLayer");
+const img = document.getElementById("mainImage");
+const boxLayer = document.getElementById("boxLayer");
 
-let startX, startY, drawing=false;
+let startX,startY,drawing=false;
 
 app.loadImageUrl = function(){
   const url = document.getElementById("imgUrl").value;
@@ -26,27 +22,29 @@ document.getElementById("imgFile").onchange = function(e){
 };
 
 img.onload = function(){
-  boxLayer.style.width = img.clientWidth + "px";
-  boxLayer.style.height = img.clientHeight + "px";
+  boxLayer.style.width = img.clientWidth+"px";
+  boxLayer.style.height = img.clientHeight+"px";
 };
 
 app.addPage = function(){
   if(!img.src) return alert("Load image first");
 
+  nextNumber = parseInt(document.getElementById("startNumber").value)||1;
+
   chart.pages.push({
-    id: Date.now(),
-    image: img.src,
-    items: []
+    id:Date.now(),
+    image:img.src,
+    items:[]
   });
 
   currentPageIndex = chart.pages.length-1;
   refreshPageSelect();
+  renderBoxes();
 };
 
 app.changePage = function(){
   currentPageIndex = pageSelect.selectedIndex;
-  const page = chart.pages[currentPageIndex];
-  img.src = page.image;
+  img.src = chart.pages[currentPageIndex].image;
   renderBoxes();
 };
 
@@ -56,6 +54,7 @@ app.deletePage = function(){
   currentPageIndex=-1;
   refreshPageSelect();
   boxLayer.innerHTML="";
+  document.getElementById("boxList").innerHTML="";
 };
 
 function refreshPageSelect(){
@@ -69,33 +68,36 @@ function refreshPageSelect(){
   sel.selectedIndex=currentPageIndex;
 }
 
+/* DRAWING SYSTEM */
+
 boxLayer.addEventListener("mousedown", startDraw);
 boxLayer.addEventListener("touchstart", startDraw);
 
 function startDraw(e){
+
   if(currentPageIndex<0) return;
 
-  drawing=true;
-  const rect=boxLayer.getBoundingClientRect();
-  const clientX=e.touches?e.touches[0].clientX:e.clientX;
-  const clientY=e.touches?e.touches[0].clientY:e.clientY;
-  startX=clientX-rect.left;
-  startY=clientY-rect.top;
+  const rect = boxLayer.getBoundingClientRect();
+  const clientX = e.touches?e.touches[0].clientX:e.clientX;
+  const clientY = e.touches?e.touches[0].clientY:e.clientY;
 
-  const div=document.createElement("div");
-  div.className="box";
-  div.style.left=startX+"px";
-  div.style.top=startY+"px";
-  boxLayer.appendChild(div);
+  startX = clientX-rect.left;
+  startY = clientY-rect.top;
+
+  let tempBox=document.createElement("div");
+  tempBox.className="box";
+  tempBox.style.left=startX+"px";
+  tempBox.style.top=startY+"px";
+  boxLayer.appendChild(tempBox);
+
+  drawing=true;
 
   function move(ev){
     if(!drawing) return;
     const cx=ev.touches?ev.touches[0].clientX:ev.clientX;
     const cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-    const w=cx-rect.left-startX;
-    const h=cy-rect.top-startY;
-    div.style.width=w+"px";
-    div.style.height=h+"px";
+    tempBox.style.width=(cx-rect.left-startX)+"px";
+    tempBox.style.height=(cy-rect.top-startY)+"px";
   }
 
   function stop(ev){
@@ -105,19 +107,33 @@ function startDraw(e){
     document.removeEventListener("touchmove",move);
     document.removeEventListener("touchend",stop);
 
+    const w=parseFloat(tempBox.style.width);
+    const h=parseFloat(tempBox.style.height);
+
+    if(Math.abs(w)<5||Math.abs(h)<5){
+      tempBox.remove();
+      return;
+    }
+
     const scale=img.naturalWidth/img.clientWidth;
 
-    const item={
-      number:"",
-      x:parseFloat(div.style.left)*scale,
-      y:parseFloat(div.style.top)*scale,
-      w:parseFloat(div.style.width)*scale,
-      h:parseFloat(div.style.height)*scale,
-      color:""
-    };
+    let auto=document.getElementById("autoNumber").checked;
+    let numberValue="";
 
-    chart.pages[currentPageIndex].items.push(item);
-    currentItemIndex=chart.pages[currentPageIndex].items.length-1;
+    if(auto){
+      numberValue=nextNumber;
+      const step=parseInt(document.getElementById("numberStep").value)||1;
+      nextNumber+=step;
+    }
+
+    chart.pages[currentPageIndex].items.push({
+      number:numberValue,
+      x:parseFloat(tempBox.style.left)*scale,
+      y:parseFloat(tempBox.style.top)*scale,
+      w:w*scale,
+      h:h*scale,
+      color:""
+    });
 
     renderBoxes();
   }
@@ -127,6 +143,8 @@ function startDraw(e){
   document.addEventListener("touchmove",move);
   document.addEventListener("touchend",stop);
 }
+
+/* RENDER BOXES */
 
 function renderBoxes(){
   boxLayer.innerHTML="";
@@ -142,30 +160,60 @@ function renderBoxes(){
     div.style.top=(item.y*scale)+"px";
     div.style.width=(item.w*scale)+"px";
     div.style.height=(item.h*scale)+"px";
+    boxLayer.appendChild(div);
+  });
 
-    div.onclick=function(){
-      currentItemIndex=i;
-      document.getElementById("itemNumber").value=item.number;
-      document.getElementById("itemColor").value=item.color;
+  renderBoxList();
+}
+
+/* BOX LIST */
+
+function renderBoxList(){
+  const list=document.getElementById("boxList");
+  list.innerHTML="";
+  if(currentPageIndex<0) return;
+
+  const page=chart.pages[currentPageIndex];
+
+  page.items.forEach((item,index)=>{
+
+    const row=document.createElement("div");
+    row.className="box-row";
+
+    row.innerHTML=`
+      <input value="${item.number}" data-field="number">
+      <input value="${Math.round(item.x)}" data-field="x">
+      <input value="${Math.round(item.y)}" data-field="y">
+      <input value="${Math.round(item.w)}" data-field="w">
+      <input value="${Math.round(item.h)}" data-field="h">
+      <input value="${item.color||""}" data-field="color">
+      <button data-action="apply">Apply</button>
+      <button data-action="delete">Delete</button>
+    `;
+
+    row.querySelector('[data-action="apply"]').onclick=function(){
+      const inputs=row.querySelectorAll("input");
+      inputs.forEach(inp=>{
+        const f=inp.dataset.field;
+        if(f==="number"||f==="color"){
+          item[f]=inp.value;
+        }else{
+          item[f]=parseFloat(inp.value)||0;
+        }
+      });
+      renderBoxes();
     };
 
-    boxLayer.appendChild(div);
+    row.querySelector('[data-action="delete"]').onclick=function(){
+      page.items.splice(index,1);
+      renderBoxes();
+    };
+
+    list.appendChild(row);
   });
 }
 
-app.updateItem=function(){
-  if(currentItemIndex<0) return;
-  const item=chart.pages[currentPageIndex].items[currentItemIndex];
-  item.number=document.getElementById("itemNumber").value;
-  item.color=document.getElementById("itemColor").value;
-};
-
-app.deleteItem=function(){
-  if(currentItemIndex<0) return;
-  chart.pages[currentPageIndex].items.splice(currentItemIndex,1);
-  currentItemIndex=-1;
-  renderBoxes();
-};
+/* JSON */
 
 app.exportJSON=function(){
   chart.name=document.getElementById("chartName").value;
@@ -188,6 +236,7 @@ document.getElementById("importJson").onchange=function(e){
     currentPageIndex=0;
     refreshPageSelect();
     img.src=chart.pages[0].image;
+    renderBoxes();
   };
   reader.readAsText(file);
 };
