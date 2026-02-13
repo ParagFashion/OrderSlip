@@ -218,18 +218,23 @@ function renderBoxes(){
   const scale=img.clientWidth/img.naturalWidth;
 
   page.items.forEach(item=>{
+
     const div=document.createElement("div");
     div.className="box";
+
     div.style.left=(item.x*scale)+"px";
     div.style.top=(item.y*scale)+"px";
     div.style.width=(item.w*scale)+"px";
     div.style.height=(item.h*scale)+"px";
+
+    // Overlay number inside box
+    div.textContent = item.number || "";
+
     boxLayer.appendChild(div);
   });
 
   renderList();
 }
-
 /* LIST */
 function renderList(){
   const list=document.getElementById("boxList");
