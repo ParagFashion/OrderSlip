@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OrderSlip Maker</title>
+<title>OrderSlip Chart Maker</title>
 
 <style>
 body{
   font-family:Arial;
-  max-width:1100px;
+  max-width:1200px;
   margin:auto;
   padding:20px;
 }
 
-input,button{
+input,select,button{
   padding:5px;
   margin:3px;
 }
@@ -23,7 +23,6 @@ input,button{
   border:2px solid #ccc;
   display:inline-block;
   max-width:100%;
-  margin-top:10px;
 }
 
 #mainImage{
@@ -48,35 +47,21 @@ input,button{
   overflow:hidden;
 }
 
-#boxList{
+#itemList{
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:10px;
   margin-top:20px;
 }
 
-.box-card{
+.card{
   background:#fff;
-  border-radius:10px;
   padding:10px;
+  border-radius:8px;
   box-shadow:0 3px 8px rgba(0,0,0,.1);
-  text-align:center;
+  font-size:12px;
 }
 
-.popup{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-
-.popup-box{
-  background:#fff;
-  padding:20px;
-  border-radius:10px;
-}
 textarea{
   width:100%;
   margin-top:10px;
@@ -86,10 +71,10 @@ textarea{
 
 <body>
 
-<h2>OrderSlip Chart Maker</h2>
+<h2>Chart Maker (Object Structure)</h2>
 
 Chart Name:
-<input id="chartName">
+<input id="chartName" value="Sample Chart">
 
 Prefix:
 <input id="prefix" style="width:80px">
@@ -99,18 +84,17 @@ Prefix:
 Auto:
 <input type="checkbox" id="autoNumber" checked>
 Start:
-<input type="number" id="startNumber" value="401" style="width:80px">
+<input type="number" id="startNumber" value="401">
 Step:
-<input type="number" id="stepNumber" value="1" style="width:60px">
+<input type="number" id="stepNumber" value="1">
 
 <hr>
 
+Page:
+<select id="pageSelect"></select>
 Image URL:
 <input id="imgUrl">
-<button onclick="loadImage()">Load</button>
-
-OR Upload:
-<input type="file" id="imgFile">
+<button onclick="addPage()">Add Page</button>
 
 <hr>
 
@@ -122,70 +106,81 @@ OR Upload:
 <hr>
 
 <h3>Items</h3>
-<div id="boxList"></div>
+<div id="itemList"></div>
 
 <hr>
 
-<textarea id="jsonOutput" rows="10"></textarea>
-
-<!-- Popup -->
-<div id="popup" class="popup">
-  <div class="popup-box">
-    Number:
-    <input id="popupNumber"><br><br>
-    <button onclick="saveItem()">Save</button>
-    <button onclick="closePopup()">Cancel</button>
-  </div>
-</div>
+<textarea id="jsonOutput" rows="12"></textarea>
 
 <script>
 
-let chart = {
-  name:"",
-  prefix:"",
-  items:[]
+let chart={
+  name:"Sample Chart",
+  pages:[],
+  items:{}
 };
 
-let nextNumber = 401;
-let drawData = null;
+let currentPage=1;
+let nextNumber=401;
+let drawData=null;
 
-const img = document.getElementById("mainImage");
-const boxLayer = document.getElementById("boxLayer");
+const img=document.getElementById("mainImage");
+const boxLayer=document.getElementById("boxLayer");
 
-function loadImage(){
-  img.src = document.getElementById("imgUrl").value;
+/* ---------- PAGE ---------- */
+
+function addPage(){
+  const id=chart.pages.length+1;
+  const image=document.getElementById("imgUrl").value;
+  if(!image) return alert("Enter image URL");
+
+  chart.pages.push({id,image});
+  updatePageSelect();
+  selectPage(id);
+  updateJSON();
 }
 
-document.getElementById("imgFile").onchange = function(e){
-  const file = e.target.files[0];
-  if(file) img.src = URL.createObjectURL(file);
+function updatePageSelect(){
+  const sel=document.getElementById("pageSelect");
+  sel.innerHTML="";
+  chart.pages.forEach(p=>{
+    const o=document.createElement("option");
+    o.value=p.id;
+    o.text="Page "+p.id;
+    sel.appendChild(o);
+  });
+}
+
+document.getElementById("pageSelect").onchange=function(){
+  selectPage(parseInt(this.value));
 };
 
-img.onload = function(){
-  boxLayer.style.width = img.clientWidth+"px";
-  boxLayer.style.height = img.clientHeight+"px";
+function selectPage(id){
+  currentPage=id;
+  const page=chart.pages.find(p=>p.id==id);
+  img.src=page.image;
+  renderBoxes();
+}
+
+img.onload=function(){
+  boxLayer.style.width=img.clientWidth+"px";
+  boxLayer.style.height=img.clientHeight+"px";
   renderBoxes();
 };
 
-/* PREFIX LIVE */
-document.getElementById("prefix").addEventListener("input",function(){
-  chart.prefix = this.value.trim();
-  renderBoxes();
-  updateJSON();
-});
+/* ---------- DRAW ---------- */
 
-/* DRAW */
 let startX,startY,drawing=false;
 
 boxLayer.addEventListener("mousedown",function(e){
 
   if(!img.src) return;
 
-  const rect = boxLayer.getBoundingClientRect();
-  startX = e.clientX - rect.left;
-  startY = e.clientY - rect.top;
+  const rect=boxLayer.getBoundingClientRect();
+  startX=e.clientX-rect.left;
+  startY=e.clientY-rect.top;
 
-  const temp = document.createElement("div");
+  const temp=document.createElement("div");
   temp.className="box";
   temp.style.left=startX+"px";
   temp.style.top=startY+"px";
@@ -194,16 +189,15 @@ boxLayer.addEventListener("mousedown",function(e){
   drawing=true;
 
   function move(ev){
-    if(!drawing) return;
+    if(!drawing)return;
 
-    let w = ev.clientX - rect.left - startX;
-    let h = ev.clientY - rect.top - startY;
+    let w=ev.clientX-rect.left-startX;
+    let h=ev.clientY-rect.top-startY;
 
-    if(startX + w > boxLayer.clientWidth)
-      w = boxLayer.clientWidth - startX;
-
-    if(startY + h > boxLayer.clientHeight)
-      h = boxLayer.clientHeight - startY;
+    if(startX+w>boxLayer.clientWidth)
+      w=boxLayer.clientWidth-startX;
+    if(startY+h>boxLayer.clientHeight)
+      h=boxLayer.clientHeight-startY;
 
     temp.style.width=w+"px";
     temp.style.height=h+"px";
@@ -216,80 +210,72 @@ boxLayer.addEventListener("mousedown",function(e){
 
     const w=parseFloat(temp.style.width);
     const h=parseFloat(temp.style.height);
+    if(w<5||h<5){ temp.remove(); return;}
 
-    if(w<5 || h<5){
-      temp.remove();
-      return;
-    }
-
-    const scale = img.naturalWidth / img.clientWidth;
+    const scale=img.naturalWidth/img.clientWidth;
 
     drawData={
+      page:currentPage,
       x:parseFloat(temp.style.left)*scale,
       y:parseFloat(temp.style.top)*scale,
       w:w*scale,
-      h:h*scale
+      h:h*scale,
+      color:""
     };
 
     temp.remove();
 
-    if(document.getElementById("autoNumber").checked){
-      nextNumber = parseInt(document.getElementById("startNumber").value) || 1;
-      document.getElementById("popupNumber").value = nextNumber;
+    let number;
+    if(autoNumber.checked){
+      number=getNextAutoNumber();
+    }else{
+      number=prompt("Enter number:");
     }
 
-    document.getElementById("popup").style.display="flex";
+    if(!number) return;
+
+    if(chart.items[number]){
+      alert("Duplicate number");
+      return;
+    }
+
+    chart.items[number]=drawData;
+
+    updateJSON();
+    renderBoxes();
   }
 
   document.addEventListener("mousemove",move);
   document.addEventListener("mouseup",stop);
 });
 
-/* DUPLICATE CHECK */
-function isDuplicate(num,indexIgnore=null){
-  return chart.items.some((item,i)=>{
-    if(indexIgnore!==null && i===indexIgnore) return false;
-    return item.number==num;
-  });
-}
+/* ---------- AUTO NUMBER ---------- */
 
-/* SAVE */
-function saveItem(){
+function getNextAutoNumber(){
+  let num=parseInt(document.getElementById("startNumber").value)||1;
+  const step=parseInt(document.getElementById("stepNumber").value)||1;
 
-  const num = document.getElementById("popupNumber").value.trim();
-
-  if(isDuplicate(num)){
-    alert("Duplicate number not allowed");
-    return;
+  while(chart.items[num]){
+    num+=step;
   }
 
-  chart.items.push({
-    number:num,
-    ...drawData
-  });
-
-  nextNumber += parseInt(document.getElementById("stepNumber").value) || 1;
-
-  document.getElementById("popup").style.display="none";
-
-  renderBoxes();
-  updateJSON();
+  return num;
 }
 
-function closePopup(){
-  document.getElementById("popup").style.display="none";
-}
+/* ---------- RENDER ---------- */
 
-/* RENDER */
 function renderBoxes(){
 
   boxLayer.innerHTML="";
 
   if(!img.naturalWidth) return;
 
-  const scale = img.clientWidth / img.naturalWidth;
+  const scale=img.clientWidth/img.naturalWidth;
 
-  chart.items.forEach(item=>{
+  Object.keys(chart.items).forEach(num=>{
+
+    const item=chart.items[num];
+    if(item.page!=currentPage) return;
 
     const div=document.createElement("div");
     div.className="box";
@@ -299,7 +285,7 @@ function renderBoxes(){
     div.style.width=item.w*scale+"px";
     div.style.height=item.h*scale+"px";
 
-    div.textContent=(chart.prefix||"")+item.number;
+    div.textContent=(prefix.value||"")+num;
     div.style.fontSize=Math.max(12,(item.w*scale)/4)+"px";
 
     boxLayer.appendChild(div);
@@ -308,38 +294,48 @@ function renderBoxes(){
   renderList();
 }
 
+/* ---------- LIST ---------- */
+
 function renderList(){
 
-  const list=document.getElementById("boxList");
+  const list=document.getElementById("itemList");
   list.innerHTML="";
 
-  chart.items.forEach((item,index)=>{
+  Object.keys(chart.items).forEach(num=>{
+
+    const item=chart.items[num];
 
     const card=document.createElement("div");
-    card.className="box-card";
+    card.className="card";
 
     card.innerHTML=`
-      ${(chart.prefix||"")}
-      <input value="${item.number}">
-      <br>
-      <button>Delete</button>
+    <b>${num}</b><br>
+    Page:<input value="${item.page}"><br>
+    X:<input value="${item.x}"><br>
+    Y:<input value="${item.y}"><br>
+    W:<input value="${item.w}"><br>
+    H:<input value="${item.h}"><br>
+    Color:<input value="${item.color}"><br>
+    <button>Delete</button>
     `;
 
-    const input=card.querySelector("input");
+    const inputs=card.querySelectorAll("input");
 
-    input.addEventListener("input",function(){
-      if(isDuplicate(this.value,index)){
-        this.style.border="2px solid red";
-        return;
-      }
-      this.style.border="";
-      item.number=this.value;
-      renderBoxes();
-      updateJSON();
+    inputs.forEach((inp,i)=>{
+      inp.oninput=function(){
+        if(i==0) item.page=parseInt(this.value);
+        if(i==1) item.x=parseFloat(this.value);
+        if(i==2) item.y=parseFloat(this.value);
+        if(i==3) item.w=parseFloat(this.value);
+        if(i==4) item.h=parseFloat(this.value);
+        if(i==5) item.color=this.value;
+        renderBoxes();
+        updateJSON();
+      };
     });
 
     card.querySelector("button").onclick=function(){
-      chart.items.splice(index,1);
+      delete chart.items[num];
       renderBoxes();
       updateJSON();
     };
@@ -348,15 +344,13 @@ function renderList(){
   });
 }
 
-/* JSON */
+/* ---------- JSON ---------- */
+
 function updateJSON(){
   chart.name=document.getElementById("chartName").value;
-  chart.prefix=document.getElementById("prefix").value.trim();
-  document.getElementById("jsonOutput").value=
-    JSON.stringify(chart,null,2);
+  jsonOutput.value=JSON.stringify(chart,null,2);
 }
 
 </script>
-
 </body>
 </html>
