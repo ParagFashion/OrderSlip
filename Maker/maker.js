@@ -1,35 +1,45 @@
 const app = {};
 
-let chart = { name:"", pages:[] };
-let currentPageIndex = -1;
-let nextNumber = 401;
+let chart={name:"",pages:[]};
+let currentPageIndex=-1;
+let nextNumber=401;
 
-const img = document.getElementById("mainImage");
-const boxLayer = document.getElementById("boxLayer");
+const img=document.getElementById("mainImage");
+const boxLayer=document.getElementById("boxLayer");
 
 let startX,startY,drawing=false;
+let tempItemData=null;
 
-app.loadImageUrl = function(){
-  const url = document.getElementById("imgUrl").value;
-  if(!url) return;
-  img.src = url;
+/* AUTO JSON UPDATE */
+function updateJSON(){
+  chart.name=document.getElementById("chartName").value;
+  document.getElementById("jsonOutput").value=
+    JSON.stringify(chart,null,2);
+}
+
+/* IMAGE LOAD */
+app.loadImageUrl=function(){
+  const url=document.getElementById("imgUrl").value;
+  if(!url)return;
+  img.src=url;
 };
 
-document.getElementById("imgFile").onchange = function(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  img.src = URL.createObjectURL(file);
+document.getElementById("imgFile").onchange=function(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  img.src=URL.createObjectURL(file);
 };
 
-img.onload = function(){
-  boxLayer.style.width = img.clientWidth+"px";
-  boxLayer.style.height = img.clientHeight+"px";
+img.onload=function(){
+  boxLayer.style.width=img.clientWidth+"px";
+  boxLayer.style.height=img.clientHeight+"px";
 };
 
-app.addPage = function(){
-  if(!img.src) return alert("Load image first");
+/* PAGE */
+app.addPage=function(){
+  if(!img.src)return alert("Load image first");
 
-  nextNumber = parseInt(document.getElementById("startNumber").value)||1;
+  nextNumber=parseInt(document.getElementById("startNumber").value)||1;
 
   chart.pages.push({
     id:Date.now(),
@@ -37,28 +47,30 @@ app.addPage = function(){
     items:[]
   });
 
-  currentPageIndex = chart.pages.length-1;
-  refreshPageSelect();
+  currentPageIndex=chart.pages.length-1;
+  refreshSelect();
+  renderBoxes();
+  updateJSON();
+};
+
+app.changePage=function(){
+  currentPageIndex=pageSelect.selectedIndex;
+  img.src=chart.pages[currentPageIndex].image;
   renderBoxes();
 };
 
-app.changePage = function(){
-  currentPageIndex = pageSelect.selectedIndex;
-  img.src = chart.pages[currentPageIndex].image;
-  renderBoxes();
-};
-
-app.deletePage = function(){
-  if(currentPageIndex<0) return;
+app.deletePage=function(){
+  if(currentPageIndex<0)return;
   chart.pages.splice(currentPageIndex,1);
   currentPageIndex=-1;
-  refreshPageSelect();
+  refreshSelect();
   boxLayer.innerHTML="";
   document.getElementById("boxList").innerHTML="";
+  updateJSON();
 };
 
-function refreshPageSelect(){
-  const sel = document.getElementById("pageSelect");
+function refreshSelect(){
+  const sel=document.getElementById("pageSelect");
   sel.innerHTML="";
   chart.pages.forEach((p,i)=>{
     const o=document.createElement("option");
@@ -68,74 +80,60 @@ function refreshPageSelect(){
   sel.selectedIndex=currentPageIndex;
 }
 
-/* DRAWING SYSTEM */
-
-boxLayer.addEventListener("mousedown", startDraw);
-boxLayer.addEventListener("touchstart", startDraw);
+/* DRAW */
+boxLayer.addEventListener("mousedown",startDraw);
+boxLayer.addEventListener("touchstart",startDraw);
 
 function startDraw(e){
+  if(currentPageIndex<0)return;
 
-  if(currentPageIndex<0) return;
+  const rect=boxLayer.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const clientY=e.touches?e.touches[0].clientY:e.clientY;
 
-  const rect = boxLayer.getBoundingClientRect();
-  const clientX = e.touches?e.touches[0].clientX:e.clientX;
-  const clientY = e.touches?e.touches[0].clientY:e.clientY;
+  startX=clientX-rect.left;
+  startY=clientY-rect.top;
 
-  startX = clientX-rect.left;
-  startY = clientY-rect.top;
-
-  let tempBox=document.createElement("div");
-  tempBox.className="box";
-  tempBox.style.left=startX+"px";
-  tempBox.style.top=startY+"px";
-  boxLayer.appendChild(tempBox);
+  let temp=document.createElement("div");
+  temp.className="box";
+  temp.style.left=startX+"px";
+  temp.style.top=startY+"px";
+  boxLayer.appendChild(temp);
 
   drawing=true;
 
   function move(ev){
-    if(!drawing) return;
+    if(!drawing)return;
     const cx=ev.touches?ev.touches[0].clientX:ev.clientX;
     const cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-    tempBox.style.width=(cx-rect.left-startX)+"px";
-    tempBox.style.height=(cy-rect.top-startY)+"px";
+    temp.style.width=(cx-rect.left-startX)+"px";
+    temp.style.height=(cy-rect.top-startY)+"px";
   }
 
-  function stop(ev){
+  function stop(){
     drawing=false;
     document.removeEventListener("mousemove",move);
     document.removeEventListener("mouseup",stop);
     document.removeEventListener("touchmove",move);
     document.removeEventListener("touchend",stop);
 
-    const w=parseFloat(tempBox.style.width);
-    const h=parseFloat(tempBox.style.height);
+    const w=parseFloat(temp.style.width);
+    const h=parseFloat(temp.style.height);
 
     if(Math.abs(w)<5||Math.abs(h)<5){
-      tempBox.remove();
+      temp.remove();
       return;
     }
 
     const scale=img.naturalWidth/img.clientWidth;
 
-    let auto=document.getElementById("autoNumber").checked;
-    let numberValue="";
+    const realX=parseFloat(temp.style.left)*scale;
+    const realY=parseFloat(temp.style.top)*scale;
+    const realW=w*scale;
+    const realH=h*scale;
 
-    if(auto){
-      numberValue=nextNumber;
-      const step=parseInt(document.getElementById("numberStep").value)||1;
-      nextNumber+=step;
-    }
-
-    chart.pages[currentPageIndex].items.push({
-      number:numberValue,
-      x:parseFloat(tempBox.style.left)*scale,
-      y:parseFloat(tempBox.style.top)*scale,
-      w:w*scale,
-      h:h*scale,
-      color:""
-    });
-
-    renderBoxes();
+    temp.remove();
+    openPopup(realX,realY,realW,realH);
   }
 
   document.addEventListener("mousemove",move);
@@ -144,16 +142,63 @@ function startDraw(e){
   document.addEventListener("touchend",stop);
 }
 
-/* RENDER BOXES */
+/* POPUP */
+function openPopup(x,y,w,h){
+  let auto=document.getElementById("autoNumber").checked;
+  let numberValue="";
 
+  if(auto)numberValue=nextNumber;
+
+  tempItemData={x,y,w,h};
+
+  popupNumber.value=numberValue;
+  popupColor.value="";
+  popupX.value=Math.round(x);
+  popupY.value=Math.round(y);
+  popupW.value=Math.round(w);
+  popupH.value=Math.round(h);
+
+  itemPopup.style.display="flex";
+}
+
+function savePopup(){
+  if(!tempItemData)return;
+
+  chart.pages[currentPageIndex].items.push({
+    number:popupNumber.value,
+    x:tempItemData.x,
+    y:tempItemData.y,
+    w:tempItemData.w,
+    h:tempItemData.h,
+    color:popupColor.value
+  });
+
+  if(document.getElementById("autoNumber").checked){
+    const step=parseInt(numberStep.value)||1;
+    nextNumber+=step;
+  }
+
+  tempItemData=null;
+  itemPopup.style.display="none";
+
+  renderBoxes();
+  updateJSON();
+}
+
+function cancelPopup(){
+  tempItemData=null;
+  itemPopup.style.display="none";
+}
+
+/* RENDER */
 function renderBoxes(){
   boxLayer.innerHTML="";
-  if(currentPageIndex<0) return;
+  if(currentPageIndex<0)return;
 
   const page=chart.pages[currentPageIndex];
   const scale=img.clientWidth/img.naturalWidth;
 
-  page.items.forEach((item,i)=>{
+  page.items.forEach(item=>{
     const div=document.createElement("div");
     div.className="box";
     div.style.left=(item.x*scale)+"px";
@@ -163,80 +208,50 @@ function renderBoxes(){
     boxLayer.appendChild(div);
   });
 
-  renderBoxList();
+  renderList();
 }
 
-/* BOX LIST */
-
-function renderBoxList(){
+/* LIST */
+function renderList(){
   const list=document.getElementById("boxList");
   list.innerHTML="";
-  if(currentPageIndex<0) return;
+  if(currentPageIndex<0)return;
 
   const page=chart.pages[currentPageIndex];
 
   page.items.forEach((item,index)=>{
+    const card=document.createElement("div");
+    card.className="box-card";
 
-    const row=document.createElement("div");
-    row.className="box-row";
-
-    row.innerHTML=`
-      <input value="${item.number}" data-field="number">
-      <input value="${Math.round(item.x)}" data-field="x">
-      <input value="${Math.round(item.y)}" data-field="y">
-      <input value="${Math.round(item.w)}" data-field="w">
-      <input value="${Math.round(item.h)}" data-field="h">
-      <input value="${item.color||""}" data-field="color">
-      <button data-action="apply">Apply</button>
-      <button data-action="delete">Delete</button>
+    card.innerHTML=`
+      <div><b>${item.number}</b></div>
+      X:<input value="${Math.round(item.x)}">
+      Y:<input value="${Math.round(item.y)}">
+      W:<input value="${Math.round(item.w)}">
+      H:<input value="${Math.round(item.h)}">
+      Color:<input value="${item.color||""}">
+      <button>Apply</button>
+      <button>Delete</button>
     `;
 
-    row.querySelector('[data-action="apply"]').onclick=function(){
-      const inputs=row.querySelectorAll("input");
-      inputs.forEach(inp=>{
-        const f=inp.dataset.field;
-        if(f==="number"||f==="color"){
-          item[f]=inp.value;
-        }else{
-          item[f]=parseFloat(inp.value)||0;
-        }
-      });
+    const inputs=card.querySelectorAll("input");
+
+    card.querySelectorAll("button")[0].onclick=function(){
+      item.x=parseFloat(inputs[0].value)||0;
+      item.y=parseFloat(inputs[1].value)||0;
+      item.w=parseFloat(inputs[2].value)||0;
+      item.h=parseFloat(inputs[3].value)||0;
+      item.color=inputs[4].value;
       renderBoxes();
+      updateJSON();
     };
 
-    row.querySelector('[data-action="delete"]').onclick=function(){
+    card.querySelectorAll("button")[1].onclick=function(){
       page.items.splice(index,1);
       renderBoxes();
+      updateJSON();
     };
 
-    list.appendChild(row);
+    list.appendChild(card);
   });
 }
-
-/* JSON */
-
-app.exportJSON=function(){
-  chart.name=document.getElementById("chartName").value;
-  const data=JSON.stringify(chart,null,2);
-  document.getElementById("jsonOutput").value=data;
-
-  const blob=new Blob([data],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="chart.json";
-  a.click();
-};
-
-document.getElementById("importJson").onchange=function(e){
-  const file=e.target.files[0];
-  const reader=new FileReader();
-  reader.onload=function(){
-    chart=JSON.parse(reader.result);
-    document.getElementById("chartName").value=chart.name;
-    currentPageIndex=0;
-    refreshPageSelect();
-    img.src=chart.pages[0].image;
-    renderBoxes();
-  };
-  reader.readAsText(file);
-};
