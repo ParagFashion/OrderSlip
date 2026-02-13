@@ -1,0 +1,12 @@
+{
+  "name": "Sample Chart",
+  "pages": [
+    { "id": 1, "image": "images/page1.png" },
+    { "id": 2, "image": "images/page2.jpg" }
+  ],
+  "items": {
+    "401": { "page": 1, "x": 100, "y": 180, "w": 160, "h": 200, "color": "Red" },
+    "402": { "page": 1, "x": 280, "y": 180, "w": 150, "h": 200, "color": "Blue" },
+    "420": { "page": 2, "x": 80, "y": 120, "w": 170, "h": 190, "color": "Black" }
+  }
+}
