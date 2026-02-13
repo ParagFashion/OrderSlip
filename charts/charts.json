@@ -1,0 +1,8 @@
+{
+  "charts": [
+    {
+      "name": "Sample Chart",
+      "json_url": "charts/sample-chart.json"
+    }
+  ]
+}
