@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OrderSlip Maker</title>
+
+<style>
+body{
+  font-family:Arial;
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+
+input,button{
+  padding:5px;
+  margin:3px;
+}
+
+.canvas-wrap{
+  position:relative;
+  border:2px solid #ccc;
+  display:inline-block;
+  max-width:100%;
+  margin-top:10px;
+}
+
+#mainImage{
+  display:block;
+  max-width:100%;
+}
+
+#boxLayer{
+  position:absolute;
+  top:0;
+  left:0;
+}
+
+.box{
+  position:absolute;
+  border:2px solid red;
+  background:rgba(255,0,0,0.15);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  overflow:hidden;
+}
+
+#boxList{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  margin-top:20px;
+}
+
+.box-card{
+  background:#fff;
+  border-radius:10px;
+  padding:10px;
+  box-shadow:0 3px 8px rgba(0,0,0,.1);
+  text-align:center;
+}
+
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+
+.popup-box{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+}
+textarea{
+  width:100%;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>OrderSlip Chart Maker</h2>
+
+Chart Name:
+<input id="chartName">
+
+Prefix:
+<input id="prefix" style="width:80px">
+
+<br>
+
+Auto:
+<input type="checkbox" id="autoNumber" checked>
+Start:
+<input type="number" id="startNumber" value="401" style="width:80px">
+Step:
+<input type="number" id="stepNumber" value="1" style="width:60px">
+
+<hr>
+
+Image URL:
+<input id="imgUrl">
+<button onclick="loadImage()">Load</button>
+
+OR Upload:
+<input type="file" id="imgFile">
+
+<hr>
+
+<div class="canvas-wrap">
+  <img id="mainImage">
+  <div id="boxLayer"></div>
+</div>
+
+<hr>
+
+<h3>Items</h3>
+<div id="boxList"></div>
+
+<hr>
+
+<textarea id="jsonOutput" rows="10"></textarea>
+
+<!-- Popup -->
+<div id="popup" class="popup">
+  <div class="popup-box">
+    Number:
+    <input id="popupNumber"><br><br>
+    <button onclick="saveItem()">Save</button>
+    <button onclick="closePopup()">Cancel</button>
+  </div>
+</div>
+
+<script>
+
+let chart = {
+  name:"",
+  prefix:"",
+  items:[]
+};
+
+let nextNumber = 401;
+let drawData = null;
+
+const img = document.getElementById("mainImage");
+const boxLayer = document.getElementById("boxLayer");
+
+function loadImage(){
+  img.src = document.getElementById("imgUrl").value;
+}
+
+document.getElementById("imgFile").onchange = function(e){
+  const file = e.target.files[0];
+  if(file) img.src = URL.createObjectURL(file);
+};
+
+img.onload = function(){
+  boxLayer.style.width = img.clientWidth+"px";
+  boxLayer.style.height = img.clientHeight+"px";
+  renderBoxes();
+};
+
+/* PREFIX LIVE */
+document.getElementById("prefix").addEventListener("input",function(){
+  chart.prefix = this.value.trim();
+  renderBoxes();
+  updateJSON();
+});
+
+/* DRAW */
+let startX,startY,drawing=false;
+
+boxLayer.addEventListener("mousedown",function(e){
+
+  if(!img.src) return;
+
+  const rect = boxLayer.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+
+  const temp = document.createElement("div");
+  temp.className="box";
+  temp.style.left=startX+"px";
+  temp.style.top=startY+"px";
+  boxLayer.appendChild(temp);
+
+  drawing=true;
+
+  function move(ev){
+    if(!drawing) return;
+
+    let w = ev.clientX - rect.left - startX;
+    let h = ev.clientY - rect.top - startY;
+
+    if(startX + w > boxLayer.clientWidth)
+      w = boxLayer.clientWidth - startX;
+
+    if(startY + h > boxLayer.clientHeight)
+      h = boxLayer.clientHeight - startY;
+
+    temp.style.width=w+"px";
+    temp.style.height=h+"px";
+  }
+
+  function stop(){
+    drawing=false;
+    document.removeEventListener("mousemove",move);
+    document.removeEventListener("mouseup",stop);
+
+    const w=parseFloat(temp.style.width);
+    const h=parseFloat(temp.style.height);
+
+    if(w<5 || h<5){
+      temp.remove();
+      return;
+    }
+
+    const scale = img.naturalWidth / img.clientWidth;
+
+    drawData={
+      x:parseFloat(temp.style.left)*scale,
+      y:parseFloat(temp.style.top)*scale,
+      w:w*scale,
+      h:h*scale
+    };
+
+    temp.remove();
+
+    if(document.getElementById("autoNumber").checked){
+      nextNumber = parseInt(document.getElementById("startNumber").value) || 1;
+      document.getElementById("popupNumber").value = nextNumber;
+    }
+
+    document.getElementById("popup").style.display="flex";
+  }
+
+  document.addEventListener("mousemove",move);
+  document.addEventListener("mouseup",stop);
+});
+
+/* DUPLICATE CHECK */
+function isDuplicate(num,indexIgnore=null){
+  return chart.items.some((item,i)=>{
+    if(indexIgnore!==null && i===indexIgnore) return false;
+    return item.number==num;
+  });
+}
+
+/* SAVE */
+function saveItem(){
+
+  const num = document.getElementById("popupNumber").value.trim();
+
+  if(isDuplicate(num)){
+    alert("Duplicate number not allowed");
+    return;
+  }
+
+  chart.items.push({
+    number:num,
+    ...drawData
+  });
+
+  nextNumber += parseInt(document.getElementById("stepNumber").value) || 1;
+
+  document.getElementById("popup").style.display="none";
+
+  renderBoxes();
+  updateJSON();
+}
+
+function closePopup(){
+  document.getElementById("popup").style.display="none";
+}
+
+/* RENDER */
+function renderBoxes(){
+
+  boxLayer.innerHTML="";
+
+  if(!img.naturalWidth) return;
+
+  const scale = img.clientWidth / img.naturalWidth;
+
+  chart.items.forEach(item=>{
+
+    const div=document.createElement("div");
+    div.className="box";
+
+    div.style.left=item.x*scale+"px";
+    div.style.top=item.y*scale+"px";
+    div.style.width=item.w*scale+"px";
+    div.style.height=item.h*scale+"px";
+
+    div.textContent=(chart.prefix||"")+item.number;
+    div.style.fontSize=Math.max(12,(item.w*scale)/4)+"px";
+
+    boxLayer.appendChild(div);
+  });
+
+  renderList();
+}
+
+function renderList(){
+
+  const list=document.getElementById("boxList");
+  list.innerHTML="";
+
+  chart.items.forEach((item,index)=>{
+
+    const card=document.createElement("div");
+    card.className="box-card";
+
+    card.innerHTML=`
+      ${(chart.prefix||"")}
+      <input value="${item.number}">
+      <br>
+      <button>Delete</button>
+    `;
+
+    const input=card.querySelector("input");
+
+    input.addEventListener("input",function(){
+      if(isDuplicate(this.value,index)){
+        this.style.border="2px solid red";
+        return;
+      }
+      this.style.border="";
+      item.number=this.value;
+      renderBoxes();
+      updateJSON();
+    });
+
+    card.querySelector("button").onclick=function(){
+      chart.items.splice(index,1);
+      renderBoxes();
+      updateJSON();
+    };
+
+    list.appendChild(card);
+  });
+}
+
+/* JSON */
+function updateJSON(){
+  chart.name=document.getElementById("chartName").value;
+  chart.prefix=document.getElementById("prefix").value.trim();
+  document.getElementById("jsonOutput").value=
+    JSON.stringify(chart,null,2);
+}
+
+</script>
+
+</body>
+</html>
