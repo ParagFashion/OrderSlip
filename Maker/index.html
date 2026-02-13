@@ -3,36 +3,123 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OrderSlip Chart Maker</title>
-<link rel="stylesheet" href="maker.css">
+<title>OrderSlip Maker</title>
+
+<style>
+body{
+  font-family:Arial;
+  max-width:1200px;
+  margin:auto;
+  padding:20px;
+}
+
+input,select,button{
+  padding:6px;
+  margin:4px;
+}
+
+button{
+  cursor:pointer;
+}
+
+.canvas-wrap{
+  position:relative;
+  border:2px solid #ccc;
+  display:inline-block;
+  max-width:100%;
+  margin-top:10px;
+}
+
+#mainImage{
+  display:block;
+  max-width:100%;
+}
+
+#boxLayer{
+  position:absolute;
+  top:0;
+  left:0;
+}
+
+.box{
+  position:absolute;
+  border:2px solid red;
+  background:rgba(255,0,0,0.15);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  overflow:hidden;
+}
+
+#itemList{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  margin-top:20px;
+}
+
+.card{
+  background:#fff;
+  padding:10px;
+  border-radius:8px;
+  box-shadow:0 3px 8px rgba(0,0,0,.1);
+  font-size:12px;
+}
+
+textarea{
+  width:100%;
+  margin-top:10px;
+}
+
+/* Popup */
+
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+
+.popup-box{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  width:320px;
+}
+</style>
 </head>
+
 <body>
 
 <h2>Chart Maker</h2>
 
 Chart Name:
-<input id="chartName" placeholder="XYZ Chart">
+<input id="chartName" value="Sample Chart">
 
-Prefix:
-<input id="globalPrefix" placeholder="A" style="width:80px">
-
-<br><br>
+<br>
 
 Auto Number:
 <input type="checkbox" id="autoNumber" checked>
 Start:
-<input type="number" id="startNumber" value="401" style="width:80px">
+<input type="number" id="startNumber" value="401">
 Step:
-<input type="number" id="numberStep" value="1" style="width:60px">
+<input type="number" id="stepNumber" value="1">
 
 <hr>
 
-Image URL:
-<input id="imgUrl">
-<button onclick="loadImage()">Load</button>
+Page:
+<select id="pageSelect"></select>
 
-OR Upload:
-<input type="file" id="imgFile" accept="image/*">
+Image Path (for JSON):
+<input id="pageImagePath" placeholder="images/page1.png">
+
+Upload Image (Preview Only):
+<input type="file" id="imgUpload">
+
+<button onclick="addPage()">Add Page</button>
 
 <hr>
 
@@ -42,25 +129,327 @@ OR Upload:
 </div>
 
 <hr>
+
 <h3>Items</h3>
-<div id="boxList"></div>
+<div id="itemList"></div>
 
 <hr>
-<textarea id="jsonOutput" rows="12"></textarea>
 
-<!-- Popup -->
+<textarea id="jsonOutput" rows="14"></textarea>
+
+<!-- POPUP -->
 <div id="popup" class="popup">
   <div class="popup-box">
     <h3>Add Item</h3>
-    Number:
-    <input id="popupNumber"><br><br>
-    Color:
-    <input id="popupColor"><br><br>
+    Prefix:<input id="pPrefix"><br>
+    Number:<input id="pNumber"><br>
+    Page:<input id="pPage" readonly><br>
+    X:<input id="pX"><br>
+    Y:<input id="pY"><br>
+    W:<input id="pW"><br>
+    H:<input id="pH"><br>
+    Color:<input id="pColor"><br><br>
     <button onclick="saveItem()">Save</button>
     <button onclick="closePopup()">Cancel</button>
   </div>
 </div>
 
-<script src="maker.js"></script>
+<script>
+
+let chart={
+  name:"Sample Chart",
+  pages:[],
+  items:{} // key = FULL CODE (ex: G401)
+};
+
+let currentPage=null;
+let currentPreviewImage=null;
+let tempData=null;
+
+const img=document.getElementById("mainImage");
+const boxLayer=document.getElementById("boxLayer");
+
+/* ---------- PAGE ---------- */
+
+function addPage(){
+
+  const imagePath=document.getElementById("pageImagePath").value;
+  if(!imagePath) return alert("Enter image path");
+  if(!currentPreviewImage) return alert("Upload image first");
+
+  const id=chart.pages.length+1;
+
+  chart.pages.push({id,image:imagePath});
+
+  updatePageSelect();
+  selectPage(id);
+  updateJSON();
+}
+
+function updatePageSelect(){
+  const sel=document.getElementById("pageSelect");
+  sel.innerHTML="";
+  chart.pages.forEach(p=>{
+    const o=document.createElement("option");
+    o.value=p.id;
+    o.text="Page "+p.id;
+    sel.appendChild(o);
+  });
+}
+
+document.getElementById("pageSelect").onchange=function(){
+  selectPage(parseInt(this.value));
+};
+
+function selectPage(id){
+  currentPage=id;
+  img.src=currentPreviewImage;
+  renderBoxes();
+}
+
+/* ---------- IMAGE UPLOAD ---------- */
+
+document.getElementById("imgUpload").onchange=function(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  currentPreviewImage=URL.createObjectURL(file);
+  img.src=currentPreviewImage;
+};
+
+img.onload=function(){
+  boxLayer.style.width=img.clientWidth+"px";
+  boxLayer.style.height=img.clientHeight+"px";
+  renderBoxes();
+};
+
+/* ---------- DRAW ---------- */
+
+let startX,startY,drawing=false;
+
+boxLayer.addEventListener("mousedown",function(e){
+
+  if(!currentPage) return alert("Add page first");
+
+  const rect=boxLayer.getBoundingClientRect();
+  startX=e.clientX-rect.left;
+  startY=e.clientY-rect.top;
+
+  const temp=document.createElement("div");
+  temp.className="box";
+  temp.style.left=startX+"px";
+  temp.style.top=startY+"px";
+  boxLayer.appendChild(temp);
+
+  drawing=true;
+
+  function move(ev){
+    if(!drawing) return;
+
+    let w=ev.clientX-rect.left-startX;
+    let h=ev.clientY-rect.top-startY;
+
+    if(startX+w>boxLayer.clientWidth)
+      w=boxLayer.clientWidth-startX;
+    if(startY+h>boxLayer.clientHeight)
+      h=boxLayer.clientHeight-startY;
+
+    temp.style.width=w+"px";
+    temp.style.height=h+"px";
+  }
+
+  function stop(){
+    drawing=false;
+    document.removeEventListener("mousemove",move);
+    document.removeEventListener("mouseup",stop);
+
+    const w=parseFloat(temp.style.width);
+    const h=parseFloat(temp.style.height);
+    if(w<5||h<5){ temp.remove(); return;}
+
+    const scale=img.naturalWidth/img.clientWidth;
+
+    tempData={
+      page:currentPage,
+      x:Math.round(parseFloat(temp.style.left)*scale),
+      y:Math.round(parseFloat(temp.style.top)*scale),
+      w:Math.round(w*scale),
+      h:Math.round(h*scale),
+      color:""
+    };
+
+    temp.remove();
+    openPopup();
+  }
+
+  document.addEventListener("mousemove",move);
+  document.addEventListener("mouseup",stop);
+});
+
+/* ---------- POPUP ---------- */
+
+function openPopup(){
+
+  document.getElementById("popup").style.display="flex";
+
+  document.getElementById("pPrefix").value="";
+  document.getElementById("pPage").value=tempData.page;
+  document.getElementById("pX").value=tempData.x;
+  document.getElementById("pY").value=tempData.y;
+  document.getElementById("pW").value=tempData.w;
+  document.getElementById("pH").value=tempData.h;
+  document.getElementById("pColor").value="";
+
+  if(document.getElementById("autoNumber").checked){
+    document.getElementById("pNumber").value=
+      getNextAutoNumber("");
+  }
+}
+
+function closePopup(){
+  document.getElementById("popup").style.display="none";
+}
+
+/* ---------- SAVE ITEM ---------- */
+
+function saveItem(){
+
+  const prefix=document.getElementById("pPrefix").value.trim();
+  const number=document.getElementById("pNumber").value.trim();
+
+  if(!number) return alert("Number required");
+
+  const fullCode=prefix+number;
+
+  if(chart.items[fullCode]){
+    alert("Duplicate full code");
+    return;
+  }
+
+  chart.items[fullCode]={
+    page:parseInt(document.getElementById("pPage").value),
+    x:parseFloat(document.getElementById("pX").value),
+    y:parseFloat(document.getElementById("pY").value),
+    w:parseFloat(document.getElementById("pW").value),
+    h:parseFloat(document.getElementById("pH").value),
+    color:document.getElementById("pColor").value
+  };
+
+  closePopup();
+  updateJSON();
+  renderBoxes();
+}
+
+/* ---------- AUTO NUMBER ---------- */
+
+function getNextAutoNumber(prefix){
+
+  let num=parseInt(document.getElementById("startNumber").value)||1;
+  const step=parseInt(document.getElementById("stepNumber").value)||1;
+
+  while(chart.items[prefix+num]){
+    num+=step;
+  }
+
+  return num;
+}
+
+/* ---------- RENDER ---------- */
+
+function renderBoxes(){
+
+  boxLayer.innerHTML="";
+  if(!img.naturalWidth) return;
+
+  const scale=img.clientWidth/img.naturalWidth;
+
+  Object.keys(chart.items).forEach(code=>{
+
+    const item=chart.items[code];
+    if(item.page!=currentPage) return;
+
+    const div=document.createElement("div");
+    div.className="box";
+
+    div.style.left=item.x*scale+"px";
+    div.style.top=item.y*scale+"px";
+    div.style.width=item.w*scale+"px";
+    div.style.height=item.h*scale+"px";
+
+    div.textContent=code;
+    div.style.fontSize=Math.max(12,(item.w*scale)/4)+"px";
+
+    boxLayer.appendChild(div);
+  });
+
+  renderList();
+}
+
+/* ---------- LIST ---------- */
+
+function renderList(){
+
+  const list=document.getElementById("itemList");
+  list.innerHTML="";
+
+  Object.keys(chart.items).forEach(code=>{
+
+    const item=chart.items[code];
+
+    const card=document.createElement("div");
+    card.className="card";
+
+    card.innerHTML=`
+    Code:<input value="${code}"><br>
+    Page:<input value="${item.page}"><br>
+    X:<input value="${item.x}"><br>
+    Y:<input value="${item.y}"><br>
+    W:<input value="${item.w}"><br>
+    H:<input value="${item.h}"><br>
+    Color:<input value="${item.color}"><br>
+    <button>Delete</button>
+    `;
+
+    const inputs=card.querySelectorAll("input");
+
+    // Rename code
+    inputs[0].onchange=function(){
+      const newCode=this.value.trim();
+      if(chart.items[newCode]){
+        alert("Duplicate code");
+        this.value=code;
+        return;
+      }
+      chart.items[newCode]=item;
+      delete chart.items[code];
+      renderBoxes();
+      updateJSON();
+    };
+
+    inputs[1].oninput=function(){ item.page=parseInt(this.value); renderBoxes(); updateJSON(); };
+    inputs[2].oninput=function(){ item.x=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[3].oninput=function(){ item.y=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[4].oninput=function(){ item.w=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[5].oninput=function(){ item.h=parseFloat(this.value); renderBoxes(); updateJSON(); };
+    inputs[6].oninput=function(){ item.color=this.value; updateJSON(); };
+
+    card.querySelector("button").onclick=function(){
+      delete chart.items[code];
+      renderBoxes();
+      updateJSON();
+    };
+
+    list.appendChild(card);
+  });
+}
+
+/* ---------- JSON ---------- */
+
+function updateJSON(){
+  chart.name=document.getElementById("chartName").value;
+  document.getElementById("jsonOutput").value=
+    JSON.stringify(chart,null,2);
+}
+
+</script>
 </body>
 </html>
