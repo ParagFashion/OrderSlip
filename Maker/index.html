@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chart Coordinate Maker</title>
+<link rel="stylesheet" href="maker.css">
+</head>
+<body>
+
+<h2>Chart Coordinate Maker</h2>
+
+Chart Name:
+<input id="chartName" placeholder="XYZ Chart"><br><br>
+
+Image URL:
+<input id="imgUrl" placeholder="images/page1.jpg">
+<button onclick="app.loadImageUrl()">Load</button>
+
+OR Upload Image:
+<input type="file" id="imgFile" accept="image/*"><br><br>
+
+<button onclick="app.addPage()">Add Page</button>
+<select id="pageSelect" onchange="app.changePage()"></select>
+<button onclick="app.deletePage()">Delete Page</button>
+
+<hr>
+
+<div class="canvas-wrap">
+  <img id="mainImage">
+  <div id="boxLayer"></div>
+</div>
+
+<hr>
+
+Number:
+<input id="itemNumber">
+Color:
+<input id="itemColor" placeholder="Red"><br>
+<button onclick="app.updateItem()">Update</button>
+<button onclick="app.deleteItem()">Delete</button>
+
+<hr>
+
+<button onclick="app.exportJSON()">Export JSON</button>
+<input type="file" id="importJson" accept=".json">
+
+<textarea id="jsonOutput" rows="10"></textarea>
+
+<script src="maker.js"></script>
+</body>
+</html>
