@@ -13,12 +13,22 @@
 Chart Name:
 <input id="chartName" placeholder="XYZ Chart"><br><br>
 
+Auto Numbering:
+<input type="checkbox" id="autoNumber" checked>
+Start From:
+<input type="number" id="startNumber" value="401" style="width:90px">
+Step:
+<input type="number" id="numberStep" value="1" style="width:60px">
+<hr>
+
 Image URL:
 <input id="imgUrl" placeholder="images/page1.jpg">
 <button onclick="app.loadImageUrl()">Load</button>
 
-OR Upload Image:
-<input type="file" id="imgFile" accept="image/*"><br><br>
+OR Upload:
+<input type="file" id="imgFile" accept="image/*">
+
+<br><br>
 
 <button onclick="app.addPage()">Add Page</button>
 <select id="pageSelect" onchange="app.changePage()"></select>
@@ -32,20 +42,14 @@ OR Upload Image:
 </div>
 
 <hr>
-
-Number:
-<input id="itemNumber">
-Color:
-<input id="itemColor" placeholder="Red"><br>
-<button onclick="app.updateItem()">Update</button>
-<button onclick="app.deleteItem()">Delete</button>
+<h3>Box List</h3>
+<div id="boxList"></div>
 
 <hr>
-
 <button onclick="app.exportJSON()">Export JSON</button>
 <input type="file" id="importJson" accept=".json">
 
-<textarea id="jsonOutput" rows="10"></textarea>
+<textarea id="jsonOutput" rows="12"></textarea>
 
 <script src="maker.js"></script>
 </body>
