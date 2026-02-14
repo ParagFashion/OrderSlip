@@ -72,7 +72,6 @@ button{
 
 .fullscreen img{
     width:100vw !important;
-    height:auto;
 }
 </style>
 </head>
@@ -111,40 +110,46 @@ const itemSelect = document.getElementById("itemSelect");
 
 
 // LOAD CHARTS
-fetch("charts/charts.json")
+fetch("chart/charts.json")
 .then(res=>res.json())
 .then(data=>{
     chartsData = data;
-    loadCharts();
+    initCharts();
+})
+.catch(err=>{
+    console.error("Chart load error:", err);
 });
 
 
-function loadCharts(){
+function initCharts(){
     chartSelector.innerHTML = "";
+
     Object.keys(chartsData).forEach(key=>{
-        let opt = document.createElement("option");
+        const opt = document.createElement("option");
         opt.value = key;
         opt.textContent = chartsData[key].name;
         chartSelector.appendChild(opt);
     });
 
-    chartSelector.addEventListener("change", loadSelectedChart);
+    chartSelector.onchange = loadSelectedChart;
+
     loadSelectedChart();
 }
 
 
 function loadSelectedChart(){
     currentChart = chartsData[chartSelector.value];
-
     if(!currentChart) return;
-
-    chartImage.src = currentChart.pages[0].image;
 
     itemsKeys = Object.keys(currentChart.items);
     currentIndex = 0;
 
-    renderDropdown();
-    renderBoxes();
+    chartImage.onload = () => {
+        renderDropdown();
+        renderBoxes();
+    };
+
+    chartImage.src = currentChart.pages[0].image;
 }
 
 
@@ -152,7 +157,7 @@ function renderDropdown(){
     itemSelect.innerHTML = "";
 
     itemsKeys.forEach((key,index)=>{
-        let opt = document.createElement("option");
+        const opt = document.createElement("option");
         opt.value = index;
         opt.textContent = key;
         itemSelect.appendChild(opt);
@@ -160,32 +165,28 @@ function renderDropdown(){
 
     itemSelect.value = currentIndex;
 
-    itemSelect.addEventListener("change",()=>{
+    itemSelect.onchange = ()=>{
         currentIndex = parseInt(itemSelect.value);
         renderBoxes();
-    });
+    };
 }
 
 
 function renderBoxes(){
-    document.querySelectorAll(".box").forEach(b=>b.remove());
+    if(!chartImage.naturalWidth) return;
 
-    const key = itemsKeys[currentIndex];
-    const item = currentChart.items[key];
+    document.querySelectorAll(".box").forEach(b=>b.remove());
 
     const imgWidth = chartImage.clientWidth;
     const imgHeight = chartImage.clientHeight;
 
-    const naturalWidth = chartImage.naturalWidth;
-    const naturalHeight = chartImage.naturalHeight;
-
-    const scaleX = imgWidth / naturalWidth;
-    const scaleY = imgHeight / naturalHeight;
+    const scaleX = imgWidth / chartImage.naturalWidth;
+    const scaleY = imgHeight / chartImage.naturalHeight;
 
     Object.keys(currentChart.items).forEach(k=>{
         const it = currentChart.items[k];
 
-        let div = document.createElement("div");
+        const div = document.createElement("div");
         div.className = "box";
         div.style.left = (it.x * scaleX) + "px";
         div.style.top = (it.y * scaleY) + "px";
@@ -201,7 +202,7 @@ function renderBoxes(){
 
 
 function nextItem(){
-    if(currentIndex < itemsKeys.length-1){
+    if(currentIndex < itemsKeys.length - 1){
         currentIndex++;
         renderBoxes();
     }
@@ -241,10 +242,8 @@ viewer.addEventListener("click",()=>{
 });
 
 
-// Re-render after image load
-chartImage.onload = ()=>{
-    renderBoxes();
-};
+// Re-render on window resize
+window.addEventListener("resize", renderBoxes);
 
 </script>
 
