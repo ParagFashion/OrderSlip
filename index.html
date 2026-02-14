@@ -1,145 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Order Slip — Chart Preview</title>
-<link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<title>Order Slip</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ========== START PAGE ========== -->
-<div class="page active" id="pageStart">
-  <div class="edit-section">
-    <h3>📝 Start Order</h3>
+<!-- START PAGE -->
+<div id="pageStart" class="page active">
+  <h2>Start Order</h2>
 
-    Chart:
-    <select id="chartSelect"></select><br>
+  <label>Chart:</label>
+  <select id="chartSelect"></select>
 
-    Shop:
-    <input id="shopCode" value="JJ"><br>
+  <label>Shop Code:</label>
+  <input id="shopCode" type="text">
 
-    Order By:
-    <input id="orderBy" value="Adil"><br>
+  <label>Order By:</label>
+  <input id="orderBy" type="text">
 
-    Start From:
-    <input id="startFrom" type="number" value="401"><br>
+  <label>Default Qty:</label>
+  <input id="defaultQty" type="number" value="1">
 
-    Prefix:
-    <input id="prefix" placeholder="optional"><br>
-
-    Default Qty:
-    <select id="defaultQty">
-      <option>15</option>
-      <option selected>30</option>
-      <option>50</option>
-      <option>100</option>
-    </select>
-
-    Items / Row:
-    <input id="cols" type="number" value="5" min="1" max="10"><br>
-
-    <div style="margin-top:10px;">
-      <button id="startBtn">Start Ordering</button>
-      <button id="resumeBtn" style="display:none" class="resume">Resume Ordering</button>
-    </div>
-  </div>
+  <button id="startBtn">Start</button>
 </div>
 
-<!-- ========== ORDER PAGE ========== -->
-<div class="page" id="pageOrder">
-  <div class="order-box">
 
-    <!-- Preview area: cropped preview OR full chart with highlight -->
-    <div class="preview-wrap">
-      <div id="cropContainer" class="crop-container" title="Tap image to zoom out">
-        <img id="chartImg" alt="chart page">
-      </div>
-      <div id="fullContainer" class="full-container" style="display:none" title="Tap image to crop back">
-        <div class="full-image-wrapper">
-          <img id="chartFullImg" alt="full chart">
-          <div id="highlightBox" class="highlight-box"></div>
-        </div>
-      </div>
+<!-- ORDER PAGE -->
+<div id="pageOrder" class="page">
 
-      <div id="colorLabel" class="color-label">Color: -</div>
-    </div>
-
-    <!-- Live ordering controls -->
-    Prefix:
-    <input id="livePrefix" style="width:90px"><br><br>
-
-    <div class="big-number">
-      <input id="liveNumber" type="number" oninput="app.changeLiveNumber()" />
-    </div>
-
-    Qty:
-    <input id="liveQty" type="number" value="30" style="width:100px" /><br><br>
-
-    <div>
-      <button class="yes" id="yesBtn">YES</button>
-      <button class="no" id="noBtn">NO</button>
-    </div>
-
-    <div style="margin-top:12px">
-      Items: <b id="countItems">0</b> |
-      Qty: <b id="countQty">0</b>
-    </div>
-
-    <div style="margin-top:12px">
-      <button class="nav-btn" id="seeListBtn">See List</button>
-      <button class="back-btn" id="backStartBtn">⬅ Back</button>
-    </div>
+  <div class="topBar">
+    <button id="backStartBtn">Back</button>
+    <select id="itemDropdown"></select>
   </div>
+
+  <div id="cropContainer">
+    <img id="chartImg">
+  </div>
+
+  <div id="fullContainer">
+    <img id="chartFullImg">
+    <div id="highlightBox"></div>
+  </div>
+
+  <div id="colorLabel"></div>
+
+  <div class="liveBox">
+    <input id="liveNumber" readonly>
+    <input id="liveQty" type="number">
+  </div>
+
+  <div class="navBtns">
+    <button id="prevBtn">←</button>
+    <button id="yesBtn">YES</button>
+    <button id="noBtn">NO</button>
+    <button id="nextBtn">→</button>
+  </div>
+
+  <button id="seeListBtn">See Order List</button>
+
 </div>
 
-<!-- ========== LIST / PRINT PAGE ========== -->
-<div class="page" id="pagePrint">
-  <div class="header">
-    <div id="pShop"></div>
-    <div id="pDate"></div>
+
+<!-- PRINT PAGE -->
+<div id="pagePrint" class="page">
+  <h2>Order Slip</h2>
+
+  <div id="printInfo">
+    <p>Shop: <span id="pShop"></span></p>
+    <p>Date: <span id="pDate"></span></p>
+    <p>Chart: <span id="pChartName"></span></p>
+    <p>Order By: <span id="pOrderBy"></span></p>
   </div>
 
-  <div class="party" id="pChartName"></div>
-  <div class="line-sep"></div>
+  <div id="orderGrid"></div>
 
-  <div id="orderGrid" class="order-grid"></div>
+  <p>Total Items: <span id="pTotalItems"></span></p>
+  <p>Total Qty: <span id="pTotalQty"></span></p>
 
-  <div class="line-sep"></div>
+  <textarea id="remarks" placeholder="Remarks"></textarea>
 
-  <div class="footer">
-    <div>
-      Order By: <b id="pOrderBy"></b><br>
-      Remarks: <b id="pRemarks"></b>
-    </div>
-    <div>
-      Total Items: <b id="pTotalItems"></b><br>
-      Total Qty: <b id="pTotalQty"></b>
-    </div>
-  </div><br>
-
-  <div class="edit-section">
-    Remarks<br>
-    <textarea id="remarks" rows="2" style="width:100%" oninput="app.renderPrint()"></textarea><br>
-    <button id="printBtn">Print / Save PDF</button>
-    <button class="back-btn" id="backOrderBtn">⬅ Back</button>
-  </div>
-</div>
-
-<!-- Popup for edit -->
-<div id="popup" class="popup">
-  <div id="popupBox" class="popup-box">
-    <h3>Edit Item</h3>
-
-    Code<br><input id="popCode"><br>
-    Qty<br><input id="popQty" type="number"><br>
-    Extra Text<br><input id="popExtra"><br>
-    Color (preview only)<br><input id="popColor"><br><br>
-
-    <button id="popUpdate">Update</button>
-    <button id="popDelete">Delete</button>
-    <button id="popClose">Cancel</button>
-  </div>
+  <button id="backOrderBtn">Back</button>
+  <button id="printBtn">Print</button>
 </div>
 
 <script src="js/app.js"></script>
