@@ -30,6 +30,7 @@
     <input id="cols" type="number" value="5"><br>
 
     <button id="startBtn">Start Ordering</button>
+    <button id="resumeBtn" style="display:none;">Resume Order</button>
   </div>
 
 </div>
@@ -57,8 +58,14 @@
 
     </div>
 
-    <div class="big-number">
-      <input id="liveNumber" readonly>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
+      
+      <button class="nav-btn" id="prevBtn">◀</button>
+      
+      <select id="liveNumber" style="font-size:22px;padding:6px 12px;border-radius:10px;"></select>
+      
+      <button class="nav-btn" id="nextBtn">▶</button>
+      
     </div>
 
     Qty:
@@ -73,6 +80,7 @@
     </div>
 
     <button class="nav-btn" id="seeListBtn">See List</button>
+    <button class="resume" id="backStartBtn">⬅ Back</button>
 
   </div>
 
@@ -110,7 +118,6 @@
   <button id="backOrderBtn">Back</button>
 
 </div>
-
 
 <!-- ================= POPUP ================= -->
 <div class="popup">
