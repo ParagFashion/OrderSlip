@@ -1,12 +1,12 @@
 {
   "charts": [
     {
-      "name": "Sample Chart",
-      "json_url": "charts/sample-chart.json"
-    },
-    {
       "name": "D.T. Gold Crush Chart",
       "json_url": "charts/DT_GC_CHART.json"
+    },
+    {
+      "name": "Sample Chart",
+      "json_url": "charts/sample-chart.json"
     }
   ]
 }
