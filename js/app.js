@@ -117,14 +117,10 @@ document.addEventListener("DOMContentLoaded", () => {
     $("pRemarks").innerText = "";
 
     let totalQty = 0;
-    let totalValue = 0;
 
     items.forEach((item, index) => {
 
       totalQty += item.qty;
-
-      const price = chartData.items[item.number]?.price || 0;
-      totalValue += item.qty * price;
 
       const cell = document.createElement("div");
       cell.className = "cell";
@@ -144,10 +140,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     $("pTotalItems").innerText = items.length;
     $("pTotalQty").innerText = totalQty;
-
-    if ($("pTotalValue")) {
-      $("pTotalValue").innerText = totalValue.toFixed(2);
-    }
   }
 
   // ================= PREVIEW =================
@@ -253,20 +245,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const number = chartNumbers[currentIndex];
     const qty = parseInt($("liveQty").value) || 0;
-    const partyName = $("partyName") ? $("partyName").value : "";
 
     const existing = items.find(i => i.number === number);
 
     if (existing) {
       existing.qty = qty;
-      existing.party = partyName;
     } else {
       items.push({
         number,
         qty,
         extra: "",
-        color: chartData.items[number].color || "",
-        party: partyName
+        color: chartData.items[number].color || ""
       });
     }
 
@@ -293,22 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateCount() {
-
-    let totalQty = 0;
-    let totalValue = 0;
-
-    items.forEach(i => {
-      totalQty += i.qty;
-      const price = chartData.items[i.number]?.price || 0;
-      totalValue += i.qty * price;
-    });
-
     $("countItems").innerText = items.length;
-    $("countQty").innerText = totalQty;
-
-    if ($("countValue")) {
-      $("countValue").innerText = totalValue.toFixed(2);
-    }
+    $("countQty").innerText =
+      items.reduce((s, i) => s + i.qty, 0);
   }
 
   // ================= POPUP =================
@@ -365,4 +341,4 @@ document.addEventListener("DOMContentLoaded", () => {
     if (page) page.classList.add("active");
   }
 
-})
+});
