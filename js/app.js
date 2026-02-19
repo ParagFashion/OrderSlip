@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log(saved_order);
   sendPurchaseAuto(shopName, partyName, orderedBy, items.map(item => ({
       code: item.number,
-      quantity: item.qty);
+      quantity: item.qty})));
   gtag('event', 'saved_order', saved_order);
   
   window.print();
