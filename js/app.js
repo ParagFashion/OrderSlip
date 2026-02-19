@@ -124,9 +124,8 @@ document.addEventListener("DOMContentLoaded", () => {
     total_value: totalValue,
     
     items: items.map(item => ({
-      item_name: item.number,
-      quantity: item.qty,
-      party_name: partyName
+      item_name: `${i.number} | ${partyName}`,
+      quantity: item.qty
     }))
   };
   
