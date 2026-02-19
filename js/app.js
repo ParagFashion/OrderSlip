@@ -118,13 +118,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const saved_order = {
     shop_name: shopName,
     party_name: partyName,
-    ordered_by: orderedBy,
+    ordered_by: orderedBy,  
     total_items: items.length,
     total_quantity: totalQty,
     total_value: totalValue,
     
     items: items.map(item => ({
-      item_name: `${i.number} | ${partyName}`,
+      item_name: `${item.number} | ${partyName}`,
       quantity: item.qty
     }))
   };
