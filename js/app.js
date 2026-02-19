@@ -98,7 +98,40 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   bind("backOrderBtn", () => showPage("pageOrder"));
-  bind("printBtn", () => window.print());
+  
+  bind("printBtn", () => {
+  
+  if (items.length === 0) {
+    alert("No items to print");
+    return;
+  }
+  
+  const shopName = $("shopCode").value;
+  const partyName = $("partyName").value;
+  const orderedBy = $("orderBy").value;
+  
+  const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+  
+  // Since no billing yet, total_value = total quantity
+  const totalValue = totalQty;
+  
+  gtag('event', 'saved_order', {
+    shop_name: shopName,
+    party_name: partyName,
+    ordered_by: orderedBy,
+    total_items: items.length,
+    total_quantity: totalQty,
+    total_value: totalValue,
+    
+    items: items.map(item => ({
+      item_name: item.number,
+      quantity: item.qty,
+      party_name: partyName
+    }))
+  });
+  
+  window.print();
+});
 
   // ================= BUILD PRINT PAGE =================
   function buildPrintPage() {
