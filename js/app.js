@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   
   const shopName = $("shopCode").value;
-  const partyName = $("partyName").value;
+  const partyName = chartSelect.options[chartSelect.selectedIndex].text;;
   const orderedBy = $("orderBy").value;
   
   const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
