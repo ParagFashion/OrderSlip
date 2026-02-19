@@ -150,6 +150,104 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ================= PREVIEW =================
+  function updatePreview() {
+
+    if (!chartData) return;
+
+    const number = chartNumbers[currentIndex];
+    liveSelect.value = number;
+
+    const item = chartData.items[number];
+    if (!item) return;
+
+    const page = chartData.pages.find(p => p.id === item.page);
+    if (!page) return;
+
+    chartImg.src = page.image;
+    chartFullImg.src = page.image;
+
+    chartImg.onload = () => {
+
+      const maxWidth = Math.min(window.innerWidth * 0.85, 360);
+      const scale = maxWidth / item.w;
+
+      cropContainer.style.width = (item.w * scale) + "px";
+      cropContainer.style.height = (item.h * scale) + "px";
+
+      chartImg.style.position = "absolute";
+      chartImg.style.left = (-item.x * scale) + "px";
+      chartImg.style.top = (-item.y * scale) + "px";
+      chartImg.style.width = (chartImg.naturalWidth * scale) + "px";
+    };
+
+    if (isFull) setTimeout(highlightBoxPosition, 50);
+
+    updateProgress();
+  }
+
+  function updateProgress() {
+    let prog = $("progressText");
+    if (!prog) {
+      prog = document.createElement("div");
+      prog.id = "progressText";
+      prog.style.marginTop = "8px";
+      liveSelect.parentElement.appendChild(prog);
+    }
+    prog.innerText = `${currentIndex + 1} / ${chartNumbers.length}`;
+  }
+
+  // ================= NAVIGATION =================
+  bind("prevBtn", () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      updatePreview();
+    }
+  });
+
+  bind("nextBtn", () => {
+    if (currentIndex < chartNumbers.length - 1) {
+      currentIndex++;
+      updatePreview();
+    }
+  });
+
+  liveSelect.onchange = function () {
+    currentIndex = chartNumbers.indexOf(this.value);
+    updatePreview();
+  };
+
+  // ================= FULL SCREEN =================
+  cropContainer.onclick = () => toggleFull();
+  fullContainer.onclick = () => toggleFull();
+
+  function toggleFull() {
+    isFull = !isFull;
+    cropContainer.style.display = isFull ? "none" : "block";
+    fullContainer.style.display = isFull ? "block" : "none";
+    if (isFull) setTimeout(highlightBoxPosition, 50);
+    else highlightBox.style.display = "none";
+  }
+
+  function highlightBoxPosition() {
+
+    const number = chartNumbers[currentIndex];
+    const item = chartData.items[number];
+    if (!item) return;
+
+    const imgWidth = chartFullImg.clientWidth;
+    const naturalWidth = chartFullImg.naturalWidth;
+    if (!imgWidth || !naturalWidth) return;
+
+    const scale = imgWidth / naturalWidth;
+
+    highlightBox.style.left = (item.x * scale) + "px";
+    highlightBox.style.top = (item.y * scale) + "px";
+    highlightBox.style.width = (item.w * scale) + "px";
+    highlightBox.style.height = (item.h * scale) + "px";
+    highlightBox.style.display = "block";
+  }
+
   // ================= YES / NO =================
   bind("yesBtn", () => {
 
@@ -267,4 +365,4 @@ document.addEventListener("DOMContentLoaded", () => {
     if (page) page.classList.add("active");
   }
 
-});
+})
