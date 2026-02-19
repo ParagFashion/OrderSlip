@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   
   console.log(saved_order);
+  sendPurchaseAuto(shopName, partyName, orderedBy, items);
   gtag('event', 'saved_order', saved_order);
   
   window.print();
@@ -376,5 +377,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const page = $(id);
     if (page) page.classList.add("active");
   }
+
+  //------------------ Save ton Sheets -------------------
+  function sendPurchaseAuto(shopName, partyName, orderdBy, items) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "https://script.google.com/macros/s/AKfycbywiaO7PUY3Nf6NjYQcmOmnRDI81Nsvb7DqwdoRQ1m2MGtvKtuuVDv8NUuLf8_URqYMzA/exec"; // replace with your Apps Script URL
+  form.target = "hidden_iframe";
+
+  let iframe = document.getElementsByName("hidden_iframe")[0];
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.name = "hidden_iframe";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+  }
+
+  const fields = {
+    shopName: shopName,
+    partyName: partyName,
+    orderdBy: orderdBy,
+    items: JSON.stringify(items),
+    returnUrl: window.location.href
+  };
+
+  for (const key in fields) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = fields[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+}
 
 });
