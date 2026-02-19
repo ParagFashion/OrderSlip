@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Since no billing yet, total_value = total quantity
   const totalValue = totalQty;
   
-  gtag('event', 'saved_order', {
+  const saved_order = {
     shop_name: shopName,
     party_name: partyName,
     ordered_by: orderedBy,
@@ -128,7 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
       quantity: item.qty,
       party_name: partyName
     }))
-  });
+  };
+  
+  console.log(saved_order);
+  gtag('event', 'saved_order', saved_order);
   
   window.print();
 });
